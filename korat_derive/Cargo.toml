@@ -1,0 +1,17 @@
+[package]
+name = "korat_derive"
+version = "0.1.0"
+authors = ["Giorgos Georgiou <giorgos.georgiou@outlook.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+rusoto_dynamodb = "0.25.0"
+korat = { version = "0.1.0", path = "../korat" }
+quote = "*"
+syn = "*"
+
+[dev-dependencies]
+rusoto_core = "0.25.0"
+dotenv = "*"

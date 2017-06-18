@@ -1,0 +1,9 @@
+[package]
+name = "korat_test"
+version = "0.1.0"
+authors = ["Giorgos Georgiou <giorgos.georgiou@outlook.com>"]
+
+
+[dependencies]
+korat = { version = "0.1.0", path = "../korat" }
+korat_derive = { version = "0.1.0", path = "../korat_derive" }

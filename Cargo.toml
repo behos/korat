@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "korat",
+    "korat_derive",
+    "korat_test"
+]
