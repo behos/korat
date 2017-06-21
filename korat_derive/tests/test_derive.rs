@@ -1,9 +1,17 @@
+#![feature(try_from)]
+
 #[macro_use] extern crate korat_derive;
 extern crate korat;
 
+extern crate rusoto_dynamodb;
+
+
+use std::collections::HashSet;
+
+
 #[derive(DynamoDBItem)]
 struct ItemWithAllTypes {
-    #[hash] id: i32,
+    id: i32,
     number_attribute: i32,
     string_attribute: String,
     string_set_attribute: HashSet<String>,
@@ -16,8 +24,8 @@ struct ItemWithAllTypes {
 
 #[derive(DynamoDBItem)]
 struct ItemWithHashAndSort {
-    #[hash] hash: i32,
-    #[sort] sort: String,
+    hash: i32,
+    sort: String,
 }
 
 
@@ -27,23 +35,7 @@ mod tests {
     use std::collections::HashSet;
     use rusoto_dynamodb::AttributeMap;
 
-    use errors::KoratError;
-    use super::DynamoDBItem;
-
-    impl DynamoDBItem for TestItem {
-        fn deserialize(attributes: AttributeMap) -> Result<Self, KoratError> {
-            Ok(TestItem {
-                number_attribute: 1,
-                string_attribute: String::from("hello"),
-                list_attribute: vec![],
-                set_attribute: HashSet::new()
-            })
-        }
-
-        fn serialize(&self) -> AttributeMap {
-            AttributeMap::new()
-        }
-    }
+    use korat::errors::ConversionError;
     
     #[test]
     fn can_deserialize_valid_input() {

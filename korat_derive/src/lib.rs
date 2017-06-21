@@ -1,11 +1,18 @@
 //! Korat provides rusoto implementations for using an structs as dynamodb items
-use rusoto_dynamodb::AttributeMap;
 
-use korat::errors::KoratError;
-use korat::DynamoDBItem;
+#[macro_use] extern crate quote;
 
+extern crate proc_macro;
+extern crate rusoto_dynamodb;
+extern crate syn;
+
+extern crate korat;
 
 mod dynamodb_item;
+
+use proc_macro::TokenStream;
+use rusoto_dynamodb::AttributeMap;
+
 
 use dynamodb_item::expand;
 

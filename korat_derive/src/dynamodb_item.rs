@@ -27,9 +27,9 @@ fn make_dynamodb_item(name: &Ident, fields: &[Field]) -> Tokens {
 
 fn get_to_attribute_map_trait(name: &Ident, fields: &[Field]) -> Tokens {
     let attribute_map = quote!(::rusoto_dynamodb::AttributeMap);
-    let from = quote!(::std::from::From);
-    let to_attribute_map = get_to_attribute_map_function(fields);
-    
+    let from = quote!(::std::convert::From);
+    let to_attribute_map = get_to_attribute_map_function(name, fields);
+
     quote! {
         impl #from<#name> for #attribute_map {
             #to_attribute_map
@@ -41,21 +41,20 @@ fn get_to_attribute_map_function(name: &Ident, fields: &[Field]) -> Tokens {
 
     quote! {
         fn from(item: #name) -> Self {
-            let attribute_map = Self::new();
-            attribute_map
+            Self::new()
         }
     }
 }
 
-fn get_from_attribute_map_trait(name: &Ident, fields: &[Field]) -> Token {
+fn get_from_attribute_map_trait(name: &Ident, fields: &[Field]) -> Tokens {
     let attribute_map = quote!(::rusoto_dynamodb::AttributeMap);
-    let korat_error = quote!(::korat::errors::KoratError); 
-    let try_from = quote!(::std::from::TryFrom);
+    let conversion_error = quote!(::korat::errors::ConversionError); 
+    let try_from = quote!(::std::convert::TryFrom);
     let from_attribute_map = get_from_attribute_map_function(name, fields);
 
     quote! {
         impl #try_from<#attribute_map> for #name {
-            type Error = #korat_error;
+            type Error = #conversion_error;
             #from_attribute_map
         }
     }
@@ -65,31 +64,25 @@ fn get_from_attribute_map_function(
     name: &Ident, fields: &[Field]
 ) -> Tokens {
     let attribute_map = quote!(::rusoto_dynamodb::AttributeMap);
+    let extractor = quote!(::korat::ValueExtractor::extract);
+    let conversion_error = quote!(::korat::errors::ConversionError); 
 
     let field_conversions = fields.iter().map(|field| {
         let field_name = &field.ident;
-        let field_accessor = get_field_accessor(field);
         quote! {
-            #field_name: #field_accessor
+            #field_name: #extractor(
+                item.remove(stringify!(#field_name))
+                    .ok_or(#conversion_error::Missing)?
+            )?
         }
     });
 
     quote! {
-        fn try_from(item: #attribute_map) -> Result<Self, Self::Error> {
-            Self {
+        fn try_from(mut item: #attribute_map) -> Result<Self, Self::Error> {
+            Ok(Self {
                 #(#field_conversions),*
-            }
+            })
         }
-    }
-}
-
-fn get_field_accessor(field: &Field) -> Tokens {
-    let field_name = &field.ident;
-    match field.ty {
-    }
-    
-    quote! {
-        item.get(stringify!(#field_name))
     }
 }
 
