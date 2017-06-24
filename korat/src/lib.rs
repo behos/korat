@@ -19,7 +19,7 @@ pub trait ValueExtractor: Sized {
 
 impl ValueExtractor for String {
     fn extract(attribute_value: AttributeValue) -> ConversionResult<Self> {
-        attribute_value.s.ok_or(ConversionError::Missing)
+        attribute_value.s.ok_or(ConversionError::MissingValue)
     }
 }
 
@@ -27,7 +27,7 @@ impl ValueExtractor for HashSet<String> {
     fn extract(
         attribute_value: AttributeValue
     ) -> ConversionResult<Self> {
-        attribute_value.ss.ok_or(ConversionError::Missing)
+        attribute_value.ss.ok_or(ConversionError::MissingValue)
             .and_then(|mut vec| Ok(vec.drain(..).collect()))
     }
 }
@@ -36,8 +36,16 @@ impl ValueExtractor for HashSet<Vec<u8>> {
     fn extract(
         attribute_value: AttributeValue
     ) -> ConversionResult<Self> {
-        attribute_value.bs.ok_or(ConversionError::Missing)
+        attribute_value.bs.ok_or(ConversionError::MissingValue)
             .and_then(|mut vec| Ok(vec.drain(..).collect()))
+    }
+}
+
+impl ValueExtractor for Vec<u8> {
+    fn extract(
+        attribute_value: AttributeValue
+    ) -> ConversionResult<Self> {
+        attribute_value.b.ok_or(ConversionError::MissingValue)
     }
 }
 
@@ -45,7 +53,7 @@ impl ValueExtractor for bool {
     fn extract(
         attribute_value: AttributeValue
     ) -> ConversionResult<Self> {
-        attribute_value.bool.ok_or(ConversionError::Missing)
+        attribute_value.bool.ok_or(ConversionError::MissingValue)
     }
 }
 
@@ -56,10 +64,10 @@ macro_rules! numeric_extractor {
                 attribute_value: AttributeValue
             ) -> ConversionResult<Self> {
                 attribute_value.n
-                    .ok_or(ConversionError::Missing)
+                    .ok_or(ConversionError::MissingValue)
                     .and_then(|number_string| {
                         number_string.parse()
-                            .map_err(|_| ConversionError::Invalid)
+                            .map_err(|_| ConversionError::InvalidValue)
                     })
             }
         }
@@ -73,11 +81,11 @@ macro_rules! numeric_set_extractor {
                 attribute_value: AttributeValue
             ) -> ConversionResult<Self> {
                 let mut number_string_vec = attribute_value.ns
-                    .ok_or(ConversionError::Missing)?;
+                    .ok_or(ConversionError::MissingValue)?;
                 let mut results: Vec<ConversionResult<$type>>= number_string_vec
                     .drain(..).map(
                         |number_string| number_string.parse()
-                            .map_err(|_| ConversionError::Invalid))
+                            .map_err(|_| ConversionError::InvalidValue))
                     .collect();
                 let aggregated_result = results.drain(..).collect();
                 aggregated_result
@@ -86,14 +94,11 @@ macro_rules! numeric_set_extractor {
     }
 }
 
-numeric_extractor!(u8);
 numeric_extractor!(i32);
 numeric_extractor!(i64);
 numeric_extractor!(f32);
 numeric_extractor!(f64);
 
-numeric_set_extractor!(u8 => HashSet<u8>);
-numeric_set_extractor!(u8 => Vec<u8>);
 numeric_set_extractor!(i32 => HashSet<i32>);
 numeric_set_extractor!(i32 => Vec<i32>);
 numeric_set_extractor!(i64 => HashSet<i64>);
@@ -177,8 +182,7 @@ mod test {
         i32_tests(i32, 1234, [super::HashSet<i32>, Vec<i32>]),
         i64_tests(i64, 1234, [super::HashSet<i64>, Vec<i64>]),
         f32_tests(f32, 123.4, [Vec<f32>]),
-        f64_tests(f64, 123.4, [Vec<f64>]),
-        u8_tests(u8, 10, [super::HashSet<u8>, Vec<u8>])
+        f64_tests(f64, 123.4, [Vec<f64>])
     ];
 
     #[test]
@@ -206,7 +210,20 @@ mod test {
     }
 
     #[test]
-    fn can_extract_byte_string_set() {
+    fn can_extract_binary() {
+        let input = vec![1, 2, 3, 4];
+        let expected = vec![1, 2, 3, 4];
+        let av = AttributeValue {
+            b: Some(input),
+            .. AttributeValue::default()
+        };
+
+        let extracted: Vec<u8> = ValueExtractor::extract(av).unwrap();
+        assert_eq!(expected, extracted);
+    }
+
+    #[test]
+    fn can_extract_binary_set() {
         let input = vec![
             "one".to_string().into_bytes(), "two".to_string().into_bytes()
         ];

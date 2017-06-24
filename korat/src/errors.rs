@@ -1,9 +1,11 @@
 quick_error! {
     #[derive(Debug)]
     pub enum ConversionError {
-        Missing {
+        MissingField {
         }
-        Invalid  {
+        MissingValue {
+        }
+        InvalidValue  {
         }
     }
 }

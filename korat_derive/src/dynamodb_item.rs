@@ -72,7 +72,7 @@ fn get_from_attribute_map_function(
         quote! {
             #field_name: #extractor(
                 item.remove(stringify!(#field_name))
-                    .ok_or(#conversion_error::Missing)?
+                    .ok_or(#conversion_error::MissingField)?
             )?
         }
     });
