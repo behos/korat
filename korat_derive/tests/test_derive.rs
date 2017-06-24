@@ -15,7 +15,7 @@ struct SingleFieldItem {
 }
 
 
-#[derive(DynamoDBItem, PartialEq, Debug)]
+#[derive(DynamoDBItem, PartialEq, Debug, Clone)]
 struct ItemWithAllTypes {
     number_attribute: i32,
     string_attribute: String,
@@ -38,8 +38,6 @@ mod tests {
 
     use rusoto_dynamodb::AttributeMap;
     use rusoto_dynamodb::AttributeValue;
-
-    use korat::errors::ConversionError;
 
     use super::{ItemWithAllTypes, SingleFieldItem};
     
@@ -81,7 +79,7 @@ mod tests {
                 number_value.to_string());
 
         let item_list_value = vec![item_value.clone(), item_value.clone()];
-        let mut item_list_attributes = vec![
+        let item_list_attributes = vec![
             AttributeValue {
                 m: Some(item_attributes.clone()),
                 .. AttributeValue::default()
@@ -126,13 +124,50 @@ mod tests {
 
     #[test]
     fn fails_to_deserialize_invalid_input() {
-        let mut attributes = AttributeMap::new();
+        let attributes = AttributeMap::new();
         let res = ItemWithAllTypes::try_from(attributes);
         assert!(res.is_err())
     }
 
     #[test]
     fn can_deserialize_serialized() {
-        unimplemented!()
+        let number_value = 1231;
+        let string_value = String::from("string");
+
+        let mut string_set_value = HashSet::new();
+        string_set_value.insert(String::from("string"));
+
+        let mut number_set_value = HashSet::new();
+        number_set_value.insert(1);
+        number_set_value.insert(2);
+        number_set_value.insert(3);
+
+        let mut binary_set_value = HashSet::new();
+        binary_set_value.insert(vec![12, 11, 28]);
+
+        let boolean_value = true;
+        let binary_value = vec![12, 44, 28, 11];
+        let item_value = SingleFieldItem {
+            number_attribute: number_value
+        };
+
+        let item_list_value = vec![item_value.clone(), item_value.clone()];
+
+        let item = ItemWithAllTypes {
+            number_attribute: number_value,
+            string_attribute: string_value,
+            string_set_attribute: string_set_value,
+            number_set_attribute: number_set_value,
+            binary_set_attribute: binary_set_value,
+            boolean_attribute: boolean_value,
+            binary_attribute: binary_value,
+            item_attribute: item_value,
+            item_list_attribute: item_list_value
+        };
+
+        let serialized: AttributeMap = item.clone().into();
+        let deserialized = ItemWithAllTypes::try_from(serialized).unwrap();
+
+        assert_eq!(item, deserialized);
     }
 }

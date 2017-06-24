@@ -11,8 +11,6 @@ extern crate korat;
 mod dynamodb_item;
 
 use proc_macro::TokenStream;
-use rusoto_dynamodb::AttributeMap;
-
 
 use dynamodb_item::expand;
 
