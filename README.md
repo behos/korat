@@ -1,4 +1,4 @@
-# korat
+# Korat
 
 Korat is a library for the creation of convenience methods when working with dynamodb items
 
