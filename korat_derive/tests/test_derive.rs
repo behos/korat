@@ -9,6 +9,12 @@ extern crate rusoto_dynamodb;
 use std::collections::HashSet;
 
 
+#[derive(DynamoDBItem, PartialEq, Debug, Clone)]
+struct SingleFieldItem {
+    number_attribute: i32
+}
+
+
 #[derive(DynamoDBItem, PartialEq, Debug)]
 struct ItemWithAllTypes {
     number_attribute: i32,
@@ -17,7 +23,9 @@ struct ItemWithAllTypes {
     number_set_attribute: HashSet<i32>,
     binary_set_attribute: HashSet<Vec<u8>>,
     boolean_attribute: bool,
-    binary_attribute: Vec<u8>
+    binary_attribute: Vec<u8>,
+    item_attribute: SingleFieldItem,
+    item_list_attribute: Vec<SingleFieldItem>
 }
 
 
@@ -33,7 +41,7 @@ mod tests {
 
     use korat::errors::ConversionError;
 
-    use super::ItemWithAllTypes;
+    use super::{ItemWithAllTypes, SingleFieldItem};
     
     macro_rules! insert {
         ($attrs:ident, $name:expr, $field:ident, $value:expr) => {
@@ -64,6 +72,25 @@ mod tests {
 
         let boolean_value = true;
         let binary_value = vec![12, 44, 28, 11];
+        let item_value = SingleFieldItem {
+            number_attribute: number_value
+        };
+
+        let mut item_attributes = AttributeMap::new();
+        insert!(item_attributes, "number_attribute", n,
+                number_value.to_string());
+
+        let item_list_value = vec![item_value.clone(), item_value.clone()];
+        let mut item_list_attributes = vec![
+            AttributeValue {
+                m: Some(item_attributes.clone()),
+                .. AttributeValue::default()
+            },
+            AttributeValue {
+                m: Some(item_attributes.clone()),
+                .. AttributeValue::default()
+            }
+        ];
 
         insert!(attributes, "number_attribute", n, number_value.to_string());
         insert!(attributes, "string_attribute", s, string_value.clone());
@@ -79,6 +106,8 @@ mod tests {
 
         insert!(attributes, "boolean_attribute", bool, boolean_value);
         insert!(attributes, "binary_attribute", b, binary_value.clone());
+        insert!(attributes, "item_attribute", m, item_attributes);
+        insert!(attributes, "item_list_attribute", l, item_list_attributes);
 
         let item = ItemWithAllTypes::try_from(attributes).unwrap();
 
@@ -89,7 +118,9 @@ mod tests {
             number_set_attribute: number_set_value,
             binary_set_attribute: binary_set_value,
             boolean_attribute: boolean_value,
-            binary_attribute: binary_value
+            binary_attribute: binary_value,
+            item_attribute: item_value,
+            item_list_attribute: item_list_value
         }, item)
     }
 

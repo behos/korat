@@ -14,6 +14,7 @@ pub fn expand(ast: &MacroInput) -> Tokens {
 
 fn make_dynamodb_item(name: &Ident, fields: &[Field]) -> Tokens {
 
+    let dynamodb_item = get_dynamodb_item_trait(name);
     let to_attribute_map = get_from_attribute_map_trait(name, fields);
     let from_attribute_map = get_to_attribute_map_trait(name, fields);
     let struct_implementation = get_struct_implementation(name, fields);
@@ -22,6 +23,7 @@ fn make_dynamodb_item(name: &Ident, fields: &[Field]) -> Tokens {
         #to_attribute_map
         #from_attribute_map
         #struct_implementation
+        #dynamodb_item
     }
 }
 
@@ -90,6 +92,15 @@ fn get_from_attribute_map_function(
 fn get_struct_implementation(name: &Ident, fields: &[Field]) -> Tokens {
     quote! {
         impl #name {
+        }
+    }
+}
+
+
+fn get_dynamodb_item_trait(name: &Ident) -> Tokens {
+    let dynamodb_trait = quote!(::korat::DynamoDBItem);
+    quote! {
+        impl #dynamodb_trait for #name {
         }
     }
 }

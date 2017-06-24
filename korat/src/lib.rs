@@ -1,3 +1,5 @@
+#![feature(try_from)]
+
 #[macro_use] extern crate quick_error;
 
 extern crate rusoto_dynamodb;
@@ -5,13 +7,18 @@ extern crate rusoto_dynamodb;
 pub mod errors;
 
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
-use rusoto_dynamodb::AttributeValue;
+use rusoto_dynamodb::{AttributeMap, AttributeValue};
 
 use errors::ConversionError;
 
 
 type ConversionResult<T> = Result<T, ConversionError>;
+
+
+pub trait DynamoDBItem: TryFrom<AttributeMap, Error=ConversionError> {}
+
 
 pub trait ValueExtractor: Sized {
     fn extract(attribute_value: AttributeValue) -> ConversionResult<Self>;
@@ -56,6 +63,30 @@ impl ValueExtractor for bool {
         attribute_value.bool.ok_or(ConversionError::MissingValue)
     }
 }
+
+impl <T: DynamoDBItem> ValueExtractor for T {
+    fn extract(
+        attribute_value: AttributeValue
+    ) -> ConversionResult<Self> {
+        attribute_value.m.ok_or(ConversionError::MissingValue)
+            .and_then(|attribute_map| T::try_from(attribute_map))
+    }
+}
+
+impl <T: DynamoDBItem> ValueExtractor for Vec<T> {
+    fn extract(
+        attribute_value: AttributeValue
+    ) -> ConversionResult<Self> {
+        let mut convertable_vec = attribute_value.l
+            .ok_or(ConversionError::MissingValue)?;
+        let results = convertable_vec
+            .drain(..)
+            .map(|convertable| ValueExtractor::extract(convertable))
+            .collect();
+        results    
+    }
+}
+
 
 macro_rules! numeric_extractor {
     ($type:ty) => {
@@ -110,11 +141,13 @@ numeric_set_extractor!(f64 => Vec<f64>);
 #[cfg(test)]
 mod test {
     use std::default::Default;
+    use std::convert::TryFrom;
     use std::collections::HashSet;
 
-    use rusoto_dynamodb::AttributeValue;
-    
-    use super::ValueExtractor;
+    use rusoto_dynamodb::{AttributeValue, AttributeMap};
+
+    use errors::ConversionError;
+    use super::{ValueExtractor, DynamoDBItem};
 
 
     macro_rules! test_for_numeric_types {
@@ -246,5 +279,74 @@ mod test {
 
         let extracted: bool = ValueExtractor::extract(av).unwrap();
         assert_eq!(true, extracted);
+    }
+
+    #[derive(PartialEq, Debug)]
+    struct Example {
+        key: i32
+    }
+
+    impl DynamoDBItem for Example {}
+
+    impl TryFrom<AttributeMap> for Example {
+        type Error = ConversionError;
+
+        fn try_from(
+            mut attribute_map: AttributeMap
+        ) -> Result<Self, Self::Error> {
+            Ok(Example {
+                key: attribute_map.remove("key").unwrap().n.unwrap().parse()
+                    .unwrap()
+            })
+        }
+    }
+ 
+    #[test]
+    fn can_extract_dynamodb_item() {
+
+        let mut attribute_map = AttributeMap::new();
+        let value = AttributeValue {
+            n: Some(123.to_string()),
+            .. AttributeValue::default()
+        };
+
+        attribute_map.insert("key".to_string(), value);
+
+        let av = AttributeValue {
+            m: Some(attribute_map),
+            .. AttributeValue::default()
+        };
+
+        let extracted: Example = ValueExtractor::extract(av).unwrap();
+        assert_eq!(Example { key: 123 }, extracted);
+    }
+ 
+    #[test]
+    fn can_extract_dynamodb_item_list() {
+        let mut attribute_map = AttributeMap::new();
+        let value = AttributeValue {
+            n: Some(123.to_string()),
+            .. AttributeValue::default()
+        };
+        attribute_map.insert("key".to_string(), value);
+
+        let values = vec![
+            AttributeValue {
+                m: Some(attribute_map.clone()),
+                .. AttributeValue::default()
+            },
+            AttributeValue {
+                m: Some(attribute_map.clone()),
+                .. AttributeValue::default()
+            }
+        ];
+
+        let av = AttributeValue {
+            l: Some(values),
+            .. AttributeValue::default()
+        };
+
+        let extracted: Vec<Example> = ValueExtractor::extract(av).unwrap();
+        assert_eq!(vec![Example { key: 123 }, Example { key: 123 }], extracted);
     }
 }
