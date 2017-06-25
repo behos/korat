@@ -103,11 +103,11 @@ fn get_from_attribute_map_function(fields: &[Field]) -> Tokens {
 
 fn get_dynamodb_traits(name: &Ident, fields: &[Field]) -> Tokens {
     let dynamodb_item_trait = get_dynamodb_item_trait(name);
-    let dynamodb_insertable_trait = get_dynamodb_insertable_trait(name, fields);
+    let dynamodb_insertables = get_dynamodb_insertables(name, fields);
 
     quote! {
         #dynamodb_item_trait
-        #dynamodb_insertable_trait
+        #dynamodb_insertables
     }
 }
 
@@ -116,11 +116,21 @@ fn get_dynamodb_item_trait(name: &Ident) -> Tokens {
     quote!{impl #dynamodb_item for #name {}}
 }
 
+fn get_dynamodb_insertables(name: &Ident, fields: &[Field]) -> Tokens {
+    let dynamodb_insertable_trait = get_dynamodb_insertable_trait(name, fields);
+    let dynamodb_key_struct = get_dynamodb_key_struct(name, fields);
+
+    quote! {
+        #dynamodb_insertable_trait
+        #dynamodb_key_struct
+    }
+}
+
 fn get_dynamodb_insertable_trait(name: &Ident, fields: &[Field]) -> Tokens {
     let dynamodb_insertable = quote!(::korat::DynamoDBInsertable);
     let key = quote!(::rusoto_dynamodb::Key);
-    let hash_key_name = get_field_with_attribute(&fields, "hash");
-    let range_key_name = get_field_with_attribute(&fields, "range");
+    let hash_key_name = get_field_name_with_attribute(&fields, "hash");
+    let range_key_name = get_field_name_with_attribute(&fields, "range");
 
     let hash_key_inserter = get_key_inserter(&hash_key_name);
     let range_key_inserter = get_key_inserter(&range_key_name);
@@ -137,10 +147,19 @@ fn get_dynamodb_insertable_trait(name: &Ident, fields: &[Field]) -> Tokens {
     }).unwrap_or(quote!{})
 }
 
-fn get_field_with_attribute<'a>(
+fn get_field_name_with_attribute(
     fields: &[Field], attribute_name: &str
 ) -> Option<Ident> {
-    let mut fields = fields.iter().filter(
+    get_field_with_attribute(fields, attribute_name)
+        .map(|field| field.ident.expect(
+            &format!("{} should have an identifier", attribute_name)
+        ))
+}
+
+fn get_field_with_attribute(
+    fields: &[Field], attribute_name: &str
+) -> Option<Field> {
+    let mut fields = fields.iter().cloned().filter(
         |field| field.attrs.iter().any(|attr| attr.name() == attribute_name)
     );
 
@@ -148,10 +167,7 @@ fn get_field_with_attribute<'a>(
     if let Some(_) = fields.next() {
         panic!("Can't set more than one {} key", attribute_name);
     }
-
-    field.map(|field| field.ident.clone().expect(
-        &format!("{} should have an identifier", attribute_name)
-    ))
+    field
 }
 
 fn get_key_inserter(field_name: &Option<Ident>) -> Tokens {    
@@ -164,4 +180,25 @@ fn get_key_inserter(field_name: &Option<Ident>) -> Tokens {
             #to_attribute_value(self.#field_name.clone())
         );
     }).unwrap_or(quote!())
+}
+
+fn get_dynamodb_key_struct(name: &Ident, fields: &[Field]) -> Tokens {
+    let name = Ident::from(format!("{}Key", name));
+
+    let hash_key = get_field_with_attribute(&fields, "hash");
+    let range_key = get_field_with_attribute(&fields, "range")
+        .map(|mut range_key| {
+            range_key.attrs = vec![];
+            quote! {#range_key}
+        }).unwrap_or(quote!());
+
+    hash_key.map(|mut hash_key| {
+        hash_key.attrs = vec![];
+        quote!{
+            #[derive(DynamoDBItem, Debug, Clone, PartialEq)]
+            struct #name {
+                #hash_key,
+                #range_key
+            }
+        }}).unwrap_or(quote!())
 }

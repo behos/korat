@@ -49,7 +49,10 @@ mod tests {
 
     use korat::DynamoDBInsertable;
 
-    use super::{ItemWithAllTypes, SingleFieldItem, ItemWithHashAndRange};
+    use super::{
+        ItemWithAllTypes, SingleFieldItem,
+        ItemWithHashAndRange, ItemWithHashAndRangeKey
+    };
 
     macro_rules! insert {
         ($attrs:ident, $name:expr, $field:ident, $value:expr) => {
@@ -192,5 +195,19 @@ mod tests {
         let key = item.get_key();
         assert_eq!("hash value", &key["hash"].clone().s.unwrap());
         assert_eq!("range value", &key["range"].clone().s.unwrap())
+    }
+
+    #[test]
+    fn can_create_key_structure_from_insertable() {
+        let key = ItemWithHashAndRangeKey {
+            hash: "something".to_string(),
+            range: "something else".to_string()
+        };
+
+        let attr_map: AttributeMap = key.clone().into();
+        let deserialized = ItemWithHashAndRangeKey::try_from(attr_map).unwrap();
+
+        assert_eq!(key, deserialized);
+        
     }
 }
