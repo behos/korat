@@ -26,6 +26,6 @@ fetching and querying your DynamoDB tables.
 
 # TODO:
 
-[ ] Create Key structs on derive
-[ ] Handle Option<> for all fields for serialization and deserialization excluding keys
-[ ] Consider providing an ORM around rusoto to use these traits to build and execute queries
+* [ ] Create Key structs on derive
+* [ ] Handle Option<> for all fields for serialization and deserialization excluding keys
+* [ ] Consider providing an ORM around rusoto to use these traits to build and execute queries
