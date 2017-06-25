@@ -15,7 +15,7 @@ use proc_macro::TokenStream;
 use dynamodb_item::expand;
 
 
-#[proc_macro_derive(DynamoDBItem)]
+#[proc_macro_derive(DynamoDBItem, attributes(hash, range))]
 pub fn dynamodb_item(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     let ast = syn::parse_macro_input(&s).unwrap();

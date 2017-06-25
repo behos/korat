@@ -9,7 +9,7 @@ pub mod errors;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
-use rusoto_dynamodb::{AttributeMap, AttributeValue};
+use rusoto_dynamodb::{AttributeMap, AttributeValue, Key};
 
 use errors::ConversionError;
 
@@ -19,6 +19,11 @@ type ConversionResult<T> = Result<T, ConversionError>;
 
 pub trait DynamoDBItem:
 TryFrom<AttributeMap, Error=ConversionError> + Into<AttributeMap> {}
+
+
+pub trait DynamoDBInsertable: DynamoDBItem {
+    fn get_key(&self) -> Key;
+}
 
 
 macro_rules! attribute_value {

@@ -29,6 +29,14 @@ struct ItemWithAllTypes {
 }
 
 
+#[derive(DynamoDBItem, PartialEq, Debug, Clone)]
+struct ItemWithHashAndRange {
+    #[hash] hash: String,
+    #[range] range: String,
+    other: String
+}
+
+
 #[cfg(test)]
 mod tests {
 
@@ -39,8 +47,10 @@ mod tests {
     use rusoto_dynamodb::AttributeMap;
     use rusoto_dynamodb::AttributeValue;
 
-    use super::{ItemWithAllTypes, SingleFieldItem};
-    
+    use korat::DynamoDBInsertable;
+
+    use super::{ItemWithAllTypes, SingleFieldItem, ItemWithHashAndRange};
+
     macro_rules! insert {
         ($attrs:ident, $name:expr, $field:ident, $value:expr) => {
             $attrs.insert(String::from($name), AttributeValue {
@@ -169,5 +179,18 @@ mod tests {
         let deserialized = ItemWithAllTypes::try_from(serialized).unwrap();
 
         assert_eq!(item, deserialized);
+    }
+
+    #[test]
+    fn can_get_hash_key_from_insertable() {
+        let item = ItemWithHashAndRange {
+            hash: "hash value".to_string(),
+            range: "range value".to_string(),
+            other: "other value".to_string()
+        };
+
+        let key = item.get_key();
+        assert_eq!("hash value", &key["hash"].clone().s.unwrap());
+        assert_eq!("range value", &key["range"].clone().s.unwrap())
     }
 }

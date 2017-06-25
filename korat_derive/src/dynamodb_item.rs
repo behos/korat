@@ -14,16 +14,14 @@ pub fn expand(ast: &MacroInput) -> Tokens {
 
 fn make_dynamodb_item(name: &Ident, fields: &[Field]) -> Tokens {
 
-    let dynamodb_item = get_dynamodb_item_trait(name);
+    let dynamodb_traits = get_dynamodb_traits(name, fields);
     let to_attribute_map = get_from_attribute_map_trait(name, fields);
     let from_attribute_map = get_to_attribute_map_trait(name, fields);
-    let struct_implementation = get_struct_implementation(name);
-    
+
     quote! {
         #from_attribute_map
         #to_attribute_map
-        #struct_implementation
-        #dynamodb_item
+        #dynamodb_traits
     }
 }
 
@@ -103,19 +101,67 @@ fn get_from_attribute_map_function(fields: &[Field]) -> Tokens {
     }
 }
 
+fn get_dynamodb_traits(name: &Ident, fields: &[Field]) -> Tokens {
+    let dynamodb_item_trait = get_dynamodb_item_trait(name);
+    let dynamodb_insertable_trait = get_dynamodb_insertable_trait(name, fields);
 
-fn get_struct_implementation(name: &Ident) -> Tokens {
     quote! {
-        impl #name {
-        }
+        #dynamodb_item_trait
+        #dynamodb_insertable_trait
     }
 }
 
-
 fn get_dynamodb_item_trait(name: &Ident) -> Tokens {
-    let dynamodb_trait = quote!(::korat::DynamoDBItem);
-    quote! {
-        impl #dynamodb_trait for #name {
+    let dynamodb_item = quote!(::korat::DynamoDBItem);
+    quote!{impl #dynamodb_item for #name {}}
+}
+
+fn get_dynamodb_insertable_trait(name: &Ident, fields: &[Field]) -> Tokens {
+    let dynamodb_insertable = quote!(::korat::DynamoDBInsertable);
+    let key = quote!(::rusoto_dynamodb::Key);
+    let hash_key_name = get_field_with_attribute(&fields, "hash");
+    let range_key_name = get_field_with_attribute(&fields, "range");
+
+    let hash_key_inserter = get_key_inserter(&hash_key_name);
+    let range_key_inserter = get_key_inserter(&range_key_name);
+
+    hash_key_name.map(|_| quote!{
+        impl #dynamodb_insertable for #name {
+            fn get_key(&self) -> #key {
+                let mut keys = #key::new();
+                #hash_key_inserter
+                #range_key_inserter
+                keys
+            }
         }
+    }).unwrap_or(quote!{})
+}
+
+fn get_field_with_attribute<'a>(
+    fields: &[Field], attribute_name: &str
+) -> Option<Ident> {
+    let mut fields = fields.iter().filter(
+        |field| field.attrs.iter().any(|attr| attr.name() == attribute_name)
+    );
+
+    let field = fields.next();
+    if let Some(_) = fields.next() {
+        panic!("Can't set more than one {} key", attribute_name);
     }
+
+    field.map(|field| field.ident.clone().expect(
+        &format!("{} should have an identifier", attribute_name)
+    ))
+}
+
+fn get_key_inserter(field_name: &Option<Ident>) -> Tokens {    
+    let to_attribute_value = quote!(
+        ::korat::AttributeValueConverter::to_attribute_value
+    );
+    field_name.as_ref().map(|field_name| quote!{
+        keys.insert(
+            stringify!(#field_name).to_string(),
+            #to_attribute_value(self.#field_name.clone())
+        );
+    }).unwrap_or(quote!())
 }
