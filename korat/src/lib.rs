@@ -140,6 +140,25 @@ impl <T: DynamoDBItem> AttributeValueConverter for Vec<T> {
     }
 }
 
+impl <T: AttributeValueConverter> AttributeValueConverter for Option<T> {
+    fn from_attribute_value(
+        attribute_value: AttributeValue
+    ) -> ConversionResult<Self> {
+        match AttributeValueConverter::from_attribute_value(attribute_value) {
+            Ok(value) => Ok(Some(value)),
+            Err(ConversionError::MissingValue) |
+            Err(ConversionError::MissingField) => Ok(None),
+            Err(err) => Err(err)
+        }
+    }
+
+    fn to_attribute_value(self) -> AttributeValue {
+        match self {
+            Some(value) => value.to_attribute_value(),
+            None => AttributeValue::default()
+        }
+    }
+}
 
 macro_rules! numeric_converter {
     ($type:ty) => {
@@ -522,5 +541,44 @@ mod test {
             let key = map.get("key").unwrap();
             assert_eq!(&value[index].key.to_string(), &key.clone().n.unwrap());
         }
+    }
+
+    #[test]
+    fn can_convert_from_option_none() {
+        let av = AttributeValue {
+            .. AttributeValue::default()
+        };
+
+        let converted: Option<bool> = AttributeValueConverter
+            ::from_attribute_value(av).unwrap();
+        assert!(converted.is_none());
+    }
+
+    #[test]
+    fn can_convert_from_option_with_value() {
+        let av = AttributeValue {
+            bool: Some(true),
+            .. AttributeValue::default()
+        };
+
+        let converted: Option<bool> = AttributeValueConverter
+            ::from_attribute_value(av).unwrap();
+        assert_eq!(Some(true), converted);
+    }
+
+    #[test]
+    fn can_convert_option_none_into_attribute_value() {
+        let value: Option<bool> = None;
+        let converted = ::AttributeValueConverter
+            ::to_attribute_value(value.clone());
+        assert!(converted.bool.is_none());
+    }
+
+    #[test]
+    fn can_convert_option_with_value_into_attribute_value() {
+        let value: Option<bool> = Some(true);
+        let converted = ::AttributeValueConverter
+            ::to_attribute_value(value.clone());
+        assert_eq!(value.unwrap(), converted.bool.unwrap());
     }
 }
