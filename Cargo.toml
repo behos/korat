@@ -1,5 +1,2 @@
 [workspace]
-members = [
-    "korat",
-    "korat_derive"
-]
+members = ["korat", "korat_derive"]

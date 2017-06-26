@@ -2,16 +2,19 @@
 name = "korat_derive"
 version = "0.1.0"
 authors = ["Giorgos Georgiou <giorgos.georgiou@outlook.com>"]
+description = "Derivables for implementation of converters of structures to and from rusoto attribute maps"
+repository = "https://github.com/behos/korat"
+keywords = ["dynamodb", "rusoto"]
+license = "Apache-2.0"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-rusoto_dynamodb = "0.25.0"
+rusoto_dynamodb = ">= 0.25.0"
 korat = { version = "0.1.0", path = "../korat" }
-quote = "*"
-syn = "*"
+quote = ">= 0.3.15"
+syn = ">= 0.11.11"
 
 [dev-dependencies]
-rusoto_core = "0.25.0"
-dotenv = "*"
+rusoto_core = ">= 0.25.0"
