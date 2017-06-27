@@ -22,12 +22,3 @@ the keys of an existing item.
 In addition to this, when deriving the implementations, a new "Key" struct will be
 automatically implemented for your types which will allow you to easily create the keys for
 fetching and querying your DynamoDB tables.
-
-
-# TODO:
-
-* [x] Create Key structs on derive
-* [x] Handle Option<> for all fields for serialization and deserialization excluding keys
-* [ ] Implement conversions to AttributeValueUpdate
-* [ ] Implement conversions to ConditionExpressions
-* [ ] Consider providing an ORM around rusoto to use these traits to build and execute queries
