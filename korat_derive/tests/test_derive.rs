@@ -47,7 +47,7 @@ mod tests {
     use rusoto_dynamodb::AttributeMap;
     use rusoto_dynamodb::AttributeValue;
 
-    use korat::DynamoDBInsertable;
+    use korat::{DynamoDBInsertable, DynamoDBItem};
 
     use super::{
         ItemWithAllTypes, SingleFieldItem,
@@ -209,5 +209,12 @@ mod tests {
 
         assert_eq!(key, deserialized);
         
+    }
+
+    #[test]
+    fn can_get_attribute_names() {
+        assert_eq!(
+            vec!["number_attribute"], SingleFieldItem::get_attribute_names()
+        )
     }
 }

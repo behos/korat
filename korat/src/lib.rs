@@ -9,7 +9,7 @@ pub mod errors;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
-use rusoto_dynamodb::{AttributeMap, AttributeValue, Key};
+use rusoto_dynamodb::{AttributeMap, AttributeName, AttributeValue, Key};
 
 use errors::ConversionError;
 
@@ -17,10 +17,17 @@ use errors::ConversionError;
 type ConversionResult<T> = Result<T, ConversionError>;
 
 
+/// The DynamoDBItem trait gathers all the requirements expected from a struct
+/// which is meant to interact with DynamoDB operations.
 pub trait DynamoDBItem:
-TryFrom<AttributeMap, Error=ConversionError> + Into<AttributeMap> {}
+TryFrom<AttributeMap, Error=ConversionError> + Into<AttributeMap> {
+
+    fn get_attribute_names() -> Vec<AttributeName>;
+}
 
 
+/// The DynamoDBInsertable trait should implement the additional expectations
+/// for structs which are meant to be stored in dynamodb.
 pub trait DynamoDBInsertable: DynamoDBItem {
     fn get_key(&self) -> Key;
 }
@@ -227,7 +234,7 @@ mod test {
     use std::convert::TryFrom;
     use std::collections::HashSet;
 
-    use rusoto_dynamodb::{AttributeValue, AttributeMap};
+    use rusoto_dynamodb::{AttributeValue, AttributeName, AttributeMap};
 
     use errors::ConversionError;
     use super::{AttributeValueConverter, DynamoDBItem};
@@ -429,7 +436,11 @@ mod test {
         key: i32
     }
 
-    impl DynamoDBItem for Example {}
+    impl DynamoDBItem for Example {
+        fn get_attribute_names() -> Vec<AttributeName> {
+            vec!["key"].iter().map(|s| s.to_string()).collect()
+        }
+    }
 
     impl TryFrom<AttributeMap> for Example {
         type Error = ConversionError;

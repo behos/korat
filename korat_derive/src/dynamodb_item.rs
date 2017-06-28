@@ -102,7 +102,7 @@ fn get_from_attribute_map_function(fields: &[Field]) -> Tokens {
 }
 
 fn get_dynamodb_traits(name: &Ident, fields: &[Field]) -> Tokens {
-    let dynamodb_item_trait = get_dynamodb_item_trait(name);
+    let dynamodb_item_trait = get_dynamodb_item_trait(name, fields);
     let dynamodb_insertables = get_dynamodb_insertables(name, fields);
 
     quote! {
@@ -111,9 +111,21 @@ fn get_dynamodb_traits(name: &Ident, fields: &[Field]) -> Tokens {
     }
 }
 
-fn get_dynamodb_item_trait(name: &Ident) -> Tokens {
+fn get_dynamodb_item_trait(name: &Ident, fields: &[Field]) -> Tokens {
     let dynamodb_item = quote!(::korat::DynamoDBItem);
-    quote!{impl #dynamodb_item for #name {}}
+    let attribute_name = quote!(::rusoto_dynamodb::AttributeName);
+    let field_names: Vec<String> = fields.iter().cloned()
+        .map(|f| f.ident.expect("DynamoDBItem fields should have identifiers")
+             .to_string())
+        .collect();
+
+    quote!{
+        impl #dynamodb_item for #name {
+            fn get_attribute_names() -> Vec<#attribute_name> {
+                vec![#(String::from(#field_names)),*]
+            }
+        }
+    }
 }
 
 fn get_dynamodb_insertables(name: &Ident, fields: &[Field]) -> Tokens {
