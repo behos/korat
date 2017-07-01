@@ -215,11 +215,17 @@ macro_rules! numeric_set_converter {
     }
 }
 
+numeric_converter!(u16);
+numeric_converter!(u32);
 numeric_converter!(i32);
 numeric_converter!(i64);
 numeric_converter!(f32);
 numeric_converter!(f64);
 
+numeric_set_converter!(u16 => HashSet<u16>);
+numeric_set_converter!(u16 => Vec<u16>);
+numeric_set_converter!(u32 => HashSet<u32>);
+numeric_set_converter!(u32 => Vec<u32>);
 numeric_set_converter!(i32 => HashSet<i32>);
 numeric_set_converter!(i32 => Vec<i32>);
 numeric_set_converter!(i64 => HashSet<i64>);
@@ -309,6 +315,8 @@ mod test {
     }
 
     test_for_numeric_types![
+        u16_tests(u16, 123, [super::HashSet<u16>, Vec<u16>]),
+        u32_tests(u32, 1234, [super::HashSet<u32>, Vec<u32>]),
         i32_tests(i32, 1234, [super::HashSet<i32>, Vec<i32>]),
         i64_tests(i64, 1234, [super::HashSet<i64>, Vec<i64>]),
         f32_tests(f32, 123.4, [Vec<f32>]),
