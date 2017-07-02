@@ -37,6 +37,16 @@ struct ItemWithHashAndRange {
 }
 
 
+mod internal {
+    #[derive(DynamoDBItem, PartialEq, Debug, Clone)]
+    pub struct InternalItem {
+        #[hash] hash: String,
+        #[range] range: String,
+        other: String
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
 
@@ -216,5 +226,11 @@ mod tests {
         assert_eq!(
             vec!["number_attribute"], SingleFieldItem::get_attribute_names()
         )
+    }
+
+    #[test]
+    fn parent_pub_visibility_is_tranfered_to_key() {
+        #[allow(unused_imports)]
+        use super::internal::{InternalItem, InternalItemKey};
     }
 }

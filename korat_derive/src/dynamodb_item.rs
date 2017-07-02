@@ -1,20 +1,23 @@
 use quote::Tokens;
-use syn::{Ident, Field, MacroInput};
+use syn::{Ident, Field, DeriveInput, Visibility};
 use syn::Body::Struct;
 use syn::VariantData::Struct as StructData;
 
 
-pub fn expand(ast: &MacroInput) -> Tokens {
+pub fn expand(ast: &DeriveInput) -> Tokens {
     let name = &ast.ident;
+    let vis = &ast.vis;
     match ast.body {
-        Struct(StructData(ref fields)) => make_dynamodb_item(name, fields),
+        Struct(StructData(ref fields)) => make_dynamodb_item(vis, name, fields),
         _ => panic!("DynamoDB Items can only be generated for structs")
     }
 }
 
-fn make_dynamodb_item(name: &Ident, fields: &[Field]) -> Tokens {
+fn make_dynamodb_item(
+    vis: &Visibility, name: &Ident, fields: &[Field]
+) -> Tokens {
 
-    let dynamodb_traits = get_dynamodb_traits(name, fields);
+    let dynamodb_traits = get_dynamodb_traits(vis, name, fields);
     let to_attribute_map = get_from_attribute_map_trait(name, fields);
     let from_attribute_map = get_to_attribute_map_trait(name, fields);
 
@@ -101,9 +104,11 @@ fn get_from_attribute_map_function(fields: &[Field]) -> Tokens {
     }
 }
 
-fn get_dynamodb_traits(name: &Ident, fields: &[Field]) -> Tokens {
+fn get_dynamodb_traits(
+    vis: &Visibility, name: &Ident, fields: &[Field]
+) -> Tokens {
     let dynamodb_item_trait = get_dynamodb_item_trait(name, fields);
-    let dynamodb_insertables = get_dynamodb_insertables(name, fields);
+    let dynamodb_insertables = get_dynamodb_insertables(vis, name, fields);
 
     quote! {
         #dynamodb_item_trait
@@ -128,9 +133,11 @@ fn get_dynamodb_item_trait(name: &Ident, fields: &[Field]) -> Tokens {
     }
 }
 
-fn get_dynamodb_insertables(name: &Ident, fields: &[Field]) -> Tokens {
+fn get_dynamodb_insertables(
+    vis: &Visibility, name: &Ident, fields: &[Field]
+) -> Tokens {
     let dynamodb_insertable_trait = get_dynamodb_insertable_trait(name, fields);
-    let dynamodb_key_struct = get_dynamodb_key_struct(name, fields);
+    let dynamodb_key_struct = get_dynamodb_key_struct(vis, name, fields);
 
     quote! {
         #dynamodb_insertable_trait
@@ -194,7 +201,9 @@ fn get_key_inserter(field_name: &Option<Ident>) -> Tokens {
     }).unwrap_or(quote!())
 }
 
-fn get_dynamodb_key_struct(name: &Ident, fields: &[Field]) -> Tokens {
+fn get_dynamodb_key_struct(
+    vis: &Visibility, name: &Ident, fields: &[Field]
+) -> Tokens {
     let name = Ident::from(format!("{}Key", name));
 
     let hash_key = get_field_with_attribute(&fields, "hash");
@@ -208,7 +217,7 @@ fn get_dynamodb_key_struct(name: &Ident, fields: &[Field]) -> Tokens {
         hash_key.attrs = vec![];
         quote!{
             #[derive(DynamoDBItem, Debug, Clone, PartialEq)]
-            struct #name {
+            #vis struct #name {
                 #hash_key,
                 #range_key
             }
