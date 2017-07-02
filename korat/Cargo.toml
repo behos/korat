@@ -1,6 +1,6 @@
 [package]
 name = "korat"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Giorgos Georgiou <giorgos.georgiou@outlook.com>"]
 description = "Convenience methods for the conversion of rusoto attribute values to concrete types for dynamodb"
 repository = "https://github.com/behos/korat"
