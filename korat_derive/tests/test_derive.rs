@@ -50,11 +50,10 @@ mod internal {
 #[cfg(test)]
 mod tests {
 
-    use std::collections::HashSet;
+    use std::collections::{HashSet, HashMap};
     use std::convert::TryFrom;
     use std::default::Default;
 
-    use rusoto_dynamodb::AttributeMap;
     use rusoto_dynamodb::AttributeValue;
 
     use korat::{DynamoDBInsertable, DynamoDBItem};
@@ -75,7 +74,7 @@ mod tests {
 
     #[test]
     fn can_deserialize_valid_input() {
-        let mut attributes = AttributeMap::new();
+        let mut attributes = HashMap::new();
 
         let number_value = 1231;
         let string_value = String::from("string");
@@ -97,7 +96,7 @@ mod tests {
             number_attribute: number_value
         };
 
-        let mut item_attributes = AttributeMap::new();
+        let mut item_attributes = HashMap::new();
         insert!(item_attributes, "number_attribute", n,
                 number_value.to_string());
 
@@ -147,7 +146,7 @@ mod tests {
 
     #[test]
     fn fails_to_deserialize_invalid_input() {
-        let attributes = AttributeMap::new();
+        let attributes = HashMap::new();
         let res = ItemWithAllTypes::try_from(attributes);
         assert!(res.is_err())
     }
@@ -188,7 +187,7 @@ mod tests {
             item_list_attribute: item_list_value
         };
 
-        let serialized: AttributeMap = item.clone().into();
+        let serialized: HashMap<String, AttributeValue> = item.clone().into();
         let deserialized = ItemWithAllTypes::try_from(serialized).unwrap();
 
         assert_eq!(item, deserialized);
@@ -214,7 +213,7 @@ mod tests {
             range: "something else".to_string()
         };
 
-        let attr_map: AttributeMap = key.clone().into();
+        let attr_map: HashMap<String, AttributeValue> = key.clone().into();
         let deserialized = ItemWithHashAndRangeKey::try_from(attr_map).unwrap();
 
         assert_eq!(key, deserialized);

@@ -6,10 +6,10 @@ extern crate rusoto_dynamodb;
 
 pub mod errors;
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::convert::TryFrom;
 
-use rusoto_dynamodb::{AttributeMap, AttributeName, AttributeValue, Key};
+use rusoto_dynamodb::AttributeValue;
 
 use errors::ConversionError;
 
@@ -20,16 +20,17 @@ type ConversionResult<T> = Result<T, ConversionError>;
 /// The DynamoDBItem trait gathers all the requirements expected from a struct
 /// which is meant to interact with DynamoDB operations.
 pub trait DynamoDBItem:
-TryFrom<AttributeMap, Error=ConversionError> + Into<AttributeMap> {
+TryFrom<HashMap<String, AttributeValue>, Error=ConversionError> +
+    Into<HashMap<String, AttributeValue>> {
 
-    fn get_attribute_names() -> Vec<AttributeName>;
+    fn get_attribute_names() -> Vec<String>;
 }
 
 
 /// The DynamoDBInsertable trait should implement the additional expectations
 /// for structs which are meant to be stored in dynamodb.
 pub trait DynamoDBInsertable: DynamoDBItem {
-    fn get_key(&self) -> Key;
+    fn get_key(&self) -> HashMap<String, AttributeValue>;
 }
 
 
@@ -238,9 +239,9 @@ numeric_set_converter!(f64 => Vec<f64>);
 mod test {
     use std::default::Default;
     use std::convert::TryFrom;
-    use std::collections::HashSet;
+    use std::collections::{HashSet, HashMap};
 
-    use rusoto_dynamodb::{AttributeValue, AttributeName, AttributeMap};
+    use rusoto_dynamodb::AttributeValue;
 
     use errors::ConversionError;
     use super::{AttributeValueConverter, DynamoDBItem};
@@ -445,16 +446,16 @@ mod test {
     }
 
     impl DynamoDBItem for Example {
-        fn get_attribute_names() -> Vec<AttributeName> {
+        fn get_attribute_names() -> Vec<String> {
             vec!["key"].iter().map(|s| s.to_string()).collect()
         }
     }
 
-    impl TryFrom<AttributeMap> for Example {
+    impl TryFrom<HashMap<String, AttributeValue>> for Example {
         type Error = ConversionError;
 
         fn try_from(
-            mut attribute_map: AttributeMap
+            mut attribute_map: HashMap<String, AttributeValue>
         ) -> Result<Self, Self::Error> {
             Ok(Example {
                 key: attribute_map.remove("key").unwrap().n.unwrap().parse()
@@ -463,9 +464,9 @@ mod test {
         }
     }
 
-    impl From<Example> for AttributeMap {
-        fn from(example: Example) -> AttributeMap {
-            let mut attribute_map = AttributeMap::new();
+    impl From<Example> for HashMap<String, AttributeValue> {
+        fn from(example: Example) -> HashMap<String, AttributeValue> {
+            let mut attribute_map = HashMap::new();
             attribute_map.insert("key".to_string(), AttributeValue {
                 n: Some(example.key.to_string()),
                 .. AttributeValue::default()
@@ -477,7 +478,7 @@ mod test {
     #[test]
     fn can_convert_from_dynamodb_item() {
 
-        let mut attribute_map = AttributeMap::new();
+        let mut attribute_map = HashMap::new();
         let value = AttributeValue {
             n: Some(123.to_string()),
             .. AttributeValue::default()
@@ -511,7 +512,7 @@ mod test {
 
     #[test]
     fn can_convert_from_dynamodb_item_list() {
-        let mut attribute_map = AttributeMap::new();
+        let mut attribute_map = HashMap::new();
         let value = AttributeValue {
             n: Some(123.to_string()),
             .. AttributeValue::default()

@@ -29,7 +29,9 @@ fn make_dynamodb_item(
 }
 
 fn get_to_attribute_map_trait(name: &Ident, fields: &[Field]) -> Tokens {
-    let attribute_map = quote!(::rusoto_dynamodb::AttributeMap);
+    let attribute_map = quote!(
+        ::std::collections::HashMap<String, ::rusoto_dynamodb::AttributeValue>
+    );
     let from = quote!(::std::convert::From);
     let to_attribute_map = get_to_attribute_map_function(name, fields);
 
@@ -65,7 +67,9 @@ fn get_to_attribute_map_function(name: &Ident, fields: &[Field]) -> Tokens {
 }
 
 fn get_from_attribute_map_trait(name: &Ident, fields: &[Field]) -> Tokens {
-    let attribute_map = quote!(::rusoto_dynamodb::AttributeMap);
+    let attribute_map = quote!(
+        ::std::collections::HashMap<String, ::rusoto_dynamodb::AttributeValue>
+    );
     let conversion_error = quote!(::korat::errors::ConversionError); 
     let try_from = quote!(::std::convert::TryFrom);
     let from_attribute_map = get_from_attribute_map_function(fields);
@@ -79,7 +83,9 @@ fn get_from_attribute_map_trait(name: &Ident, fields: &[Field]) -> Tokens {
 }
 
 fn get_from_attribute_map_function(fields: &[Field]) -> Tokens {
-    let attribute_map = quote!(::rusoto_dynamodb::AttributeMap);
+    let attribute_map = quote!(
+        ::std::collections::HashMap<String, ::rusoto_dynamodb::AttributeValue>
+    );
     let from_attribute_value = quote!(
         ::korat::AttributeValueConverter::from_attribute_value
     );
@@ -118,7 +124,6 @@ fn get_dynamodb_traits(
 
 fn get_dynamodb_item_trait(name: &Ident, fields: &[Field]) -> Tokens {
     let dynamodb_item = quote!(::korat::DynamoDBItem);
-    let attribute_name = quote!(::rusoto_dynamodb::AttributeName);
     let field_names: Vec<String> = fields.iter().cloned()
         .map(|f| f.ident.expect("DynamoDBItem fields should have identifiers")
              .to_string())
@@ -126,7 +131,7 @@ fn get_dynamodb_item_trait(name: &Ident, fields: &[Field]) -> Tokens {
 
     quote!{
         impl #dynamodb_item for #name {
-            fn get_attribute_names() -> Vec<#attribute_name> {
+            fn get_attribute_names() -> Vec<String> {
                 vec![#(String::from(#field_names)),*]
             }
         }
@@ -147,7 +152,9 @@ fn get_dynamodb_insertables(
 
 fn get_dynamodb_insertable_trait(name: &Ident, fields: &[Field]) -> Tokens {
     let dynamodb_insertable = quote!(::korat::DynamoDBInsertable);
-    let key = quote!(::rusoto_dynamodb::Key);
+    let attribute_map = quote!(
+        ::std::collections::HashMap<String, ::rusoto_dynamodb::AttributeValue>
+    );
     let hash_key_name = get_field_name_with_attribute(&fields, "hash");
     let range_key_name = get_field_name_with_attribute(&fields, "range");
 
@@ -156,8 +163,8 @@ fn get_dynamodb_insertable_trait(name: &Ident, fields: &[Field]) -> Tokens {
 
     hash_key_name.map(|_| quote!{
         impl #dynamodb_insertable for #name {
-            fn get_key(&self) -> #key {
-                let mut keys = #key::new();
+            fn get_key(&self) -> #attribute_map {
+                let mut keys = ::std::collections::HashMap::new();
                 #hash_key_inserter
                 #range_key_inserter
                 keys
