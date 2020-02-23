@@ -1,5 +1,11 @@
 # Korat
 
+## Notice
+
+I'm no longer maintaining this project (I haven't for a few years in fact. Dynomite is a different lib which was initially based on korat.
+
+## Intro
+
 Korat is a library for the creation of convenience methods when working with dynamodb items
 
 Korat provides attribute converters for most supported types from rusoto AttributeValue. It
